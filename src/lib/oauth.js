@@ -32,7 +32,7 @@
 */
 
 // The HMAC-SHA1 signature method calls b64_hmac_sha1, defined by
-// http://pajhome.org.uk/crypt/md5/sha1.js
+// http://pajhome.org.uk/crypt/md5/sha1.src
 
 /* An OAuth message is represented as an object like this:
    {method: "GET", action: "http://server.com/path", parameters: ...}
@@ -57,7 +57,7 @@
    This message object model harmonizes with the browser object model for
    input elements of an form, whose value property isn't percent encoded.
    The browser encodes each value before transmitting it. For example,
-   see consumer.setInputs in example/consumer.js.
+   see consumer.setInputs in example/consumer.src.
  */
 
 /* This script needs to know what time it is. By default, it uses the local
@@ -66,7 +66,7 @@
    an oauth_timestamp parameter, whose value is a current Unix timestamp.
    For example, when generating the enclosing document using PHP:
 
-   <script src="oauth.js?oauth_timestamp=<?=time()?>" ...
+   <script src="oauth.src?oauth_timestamp=<?=time()?>" ...
 
    Another option is to call OAuth.correctTimestamp with a Unix timestamp.
  */
@@ -490,7 +490,7 @@ OAuth.setProperties(OAuth.SignatureMethod, // class members
 ,
     parseUri: function parseUri (str) {
         /* This function was adapted from parseUri 1.2.1
-           http://stevenlevithan.com/demo/parseuri/js/assets/parseuri.js
+           http://stevenlevithan.com/demo/parseuri/src/assets/parseuri.src
          */
         var o = {key: ["source","protocol","authority","userInfo","user","password","host","port","relative","path","directory","file","query","anchor"],
                  parser: {strict: /^(?:([^:\/?#]+):)?(?:\/\/((?:(([^:@\/]*):?([^:@\/]*))?@)?([^:\/?#]*)(?::(\d*))?))?((((?:[^?#\/]*\/)*)([^?#]*))(?:\?([^#]*))?(?:#(.*))?)/ }};

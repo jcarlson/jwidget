@@ -10,6 +10,9 @@
  *      jQuery-UI 1.8.9+ (Core, Widget, Position) : http://jqueryui.com/
  *      swfObject 2.2+ : http://code.google.com/p/swfobject/
  *      jquery.wsdata 0.1+ : ???
+ *      JSON2 : http://www.JSON.org/
+ *
+ * Optional:
  *      Google Analytics Tracking Code : http://code.google.com/intl/en/apis/analytics/
  *
  * Use Google's Closure Compiler to generate minified and optimized builds
@@ -62,8 +65,7 @@
             .css({position: "absolute"})
             .hide();
 
-        this.video = $("<div/>")
-            .attr("id", mediaId())
+        this.video = $("<div id='" + mediaId() + "'/>")
             .appendTo(this.root)
             .css({
                 height: "100%",
@@ -146,8 +148,33 @@
             this.removeVideo = null;
         },
 
-        _embedWMV: function() {
-            // TODO: support WMV embeds
+        _embedWMV: function(url) {
+            this.video.append($("<object/>")
+                .attr("classid", "clsid:22d6f312-b0f6-11d0-94ab-0080c74c7e95")
+                .attr("codebase", "http://activex.microsoft.com/activex/controls/mplayer/en/nsmp2inf.cab#version=5,1,52,701")
+                .attr("type", "application/x-oleobject")
+                .attr("width", "100%")
+                .attr("height", "100%")
+                .append($("<param/>").attr("name", "filename").attr("value", url))
+                .append($("<param/>").attr("name", "autostart").attr("value", "true"))
+                .append($("<param/>").attr("name", "showcontrols").attr("value", "true"))
+                .append($("<param/>").attr("name", "showstatusbar").attr("value", "false"))
+                .append($("<param/>").attr("name", "filename").attr("value", url))
+                .append($("<embed></embed>")
+                    .attr("type", "application/x-mplayer2")
+                    .attr("pluginspace", "http://www.microsoft.com/Windows/MediaPlayer/")
+                    .attr("src", url)
+                    .attr("width", "100%")
+                    .attr("height", "100%")
+                    .attr("autostart", "1")
+                    .attr("showcontrols", "1")
+                    .attr("showstatusbar", "0")
+                    .attr("showdisplay", "0")
+                ));
+
+            this.removeVideo = function() {
+                this.video.empty();
+            }
         },
 
         _positionElements: function() {

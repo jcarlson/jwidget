@@ -364,7 +364,7 @@ $.fn.media.xaml = function(el, opts) {
 	if (!window.Sys || !window.Sys.Silverlight) {
 		if ($.fn.media.xaml.warning) return;
 		$.fn.media.xaml.warning = 1;
-		alert('You must include the Silverlight.js script.');
+		alert('You must include the Silverlight.src script.');
 		return;
 	}
 

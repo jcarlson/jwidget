@@ -80,6 +80,7 @@
     function maybeStartWidget() {
         if (bodyDone) {
             var params = {
+                container: "",
                 width: "480",
                 height: "292"
             };
@@ -115,7 +116,7 @@
             if (container != null) {
                 container.appendChild(iframe);
             } else {
-                if ($document.body.contains(self)) {
+                if (contains($document.body, self)) {
                     $document.insertAfter(iframe, self);
                 } else {
                     $document.body.appendChild(iframe);
@@ -123,6 +124,12 @@
             }
 
         }
+    }
+
+    function contains(a, b) {
+        return a.contains ?
+            a != b && a.contains(b) :
+            !!(a.compareDocumentPosition(b) & 16);
     }
 
     function setParamsFromUrl(obj, url) {

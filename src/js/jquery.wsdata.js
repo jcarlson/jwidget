@@ -54,6 +54,7 @@
                 $.handleError(request, message, "timeout", null);
             }, options.timeout),
 
+            cache: true, // if not true, jQuery adds a cache-buster... bad for OAuth...
             context: message.context,
             dataType: "jsonp",
             jsonpCallback: callback,
