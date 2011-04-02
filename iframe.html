@@ -1,0 +1,58 @@
+<!DOCTYPE>
+<html>
+    <head>
+        <title></title>
+        <script src="js/jquery.js"></script>
+        <script src="js/jquery-ui.js"></script>
+
+        <script src="js/oauth.js"></script>
+        <script src="js/sha1.js"></script>
+        <script src="js/jquery.wsdata.js"></script>
+
+        <script src="js/swfobject.js"></script>
+        <script src="js/jquery.jwidget.js"></script>
+
+        <style>
+            body {
+                margin: 0;
+                padding: 0;
+                background: #999999;
+                color: #ffffff;
+            }
+        </style>
+
+    </head>
+    <body>
+
+        <div id="media"></div>
+
+        <script type="text/javascript" lang="javascript">
+
+            function setParamsFromUrl(obj, url) {
+                var q = url.indexOf('?'),
+                    h = url.indexOf('#'),
+                    query = url.substring(q + 1, h > 0 ? h : url.length),
+                    params = query.split("&");
+
+                for (var i = 0; i < params.length; i++) {
+                    var param = params[i];
+                    if (param.indexOf("=") > -1) {
+                        var key = param.split("=")[0],
+                            value = param.split("=")[1];
+                        obj[key] = value;
+                    }
+                }
+
+            }
+
+            var params = {};
+            setParamsFromUrl(params, window.location.href);
+
+            $("body").jwidget(params);
+
+        </script>
+
+        <script src="http://www.google-analytics.com/ga.js"></script>
+
+    </body>
+</html>
