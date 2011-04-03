@@ -103,7 +103,7 @@
                 }
             }
             qs += "rdm=" + Math.floor(Math.random() * 1000000000);
-            iframe.src = basePath + "../iframe.html" + qs;
+            iframe.src = basePath + "iframe.html" + qs;
             iframe.width = params.width;
             iframe.height = params.height;
             iframe.frameBorder = "0";

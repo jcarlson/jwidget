@@ -7,10 +7,10 @@ CLOSURE_API = "http://closure-compiler.appspot.com"
 TARGET = "target"
 
 BUNDLES = {
-  "core_player.nocache.js" => ["src/js/core_player.nocache.js"],
+  "core_player.nocache.js" => ["src/core_player.nocache.js"],
   "jquery.min.js" => ["src/lib/jquery.js"],
-  "jquery.wsdata.min.js" => ["src/lib/oauth.js", "src/lib/sha1.js", "src/js/jquery.wsdata.js"],
-  "jquery.jwidget.min.js" => ["src/lib/jquery.ui.core.js","src/lib/jquery.ui.widget.js", "src/lib/jquery.ui.position.js", "src/lib/swfobject.js", "src/lib/json2.js", "src/js/jquery.jwidget.js"]
+  "jquery.wsdata.min.js" => ["src/lib/oauth.js", "src/lib/sha1.js", "src/jquery.wsdata.js"],
+  "jquery.jwidget.min.js" => ["src/lib/jquery.ui.core.js","src/lib/jquery.ui.widget.js", "src/lib/jquery.ui.position.js", "src/lib/swfobject.js", "src/lib/json2.js", "src/jquery.jwidget.js"]
 }
 
 FILES = ["src/iframe.html"]
