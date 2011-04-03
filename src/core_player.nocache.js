@@ -1,3 +1,18 @@
+/**
+ * jWidget Core Player Legacy Adapter
+ *
+ * Description: Provides drop-in backwards compatibility from GWT-based core_player to jwidget
+ * Author: Jarrod Carlson
+ * Email: jarrod.carlson@playonsports.com
+ * URL: https://github.com/methodknowledgy/jwidget
+ * Version: 1.0
+ * Requires:
+ *      [no dependencies]
+ *
+ * Use Google's Closure Compiler to generate minified and optimized builds
+ * http://closure-compiler.appspot.com/home
+ */
+
 (function() {
 
     var $window = window,

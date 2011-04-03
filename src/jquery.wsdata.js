@@ -1,12 +1,13 @@
 /**
- * Plugin Name: wsdata
- * Description: PlayON! Web Service data API
+ * Web Service Data Plugin
+ *
+ * Description: Provides access to PlayON! Sports web service data in jQuery
  * Author: Jarrod Carlson
  * Email: jarrod.carlson@playonsports.com
- * URL: ???
- * Version: 0.1
+ * URL: https://github.com/methodknowledgy/jwidget
+ * Version: 1.0
  * Requires:
- *      jQuery 1.4.4+ : http://jquery.com/
+ *      jQuery 1.5+ : http://jquery.com/
  *      OAuth for JavaScript : http://code.google.com/p/oauth/
  *      SHA1 for JavaScript : http://pajhome.org.uk/crypt/md5/index.html
  *

@@ -1,15 +1,16 @@
 /**
- * Plugin Name: jwidget
- * Description: PlayON! Video Widget for jQuery
+ * jWidget PlayON! Video Player
+ *
+ * Description: PlayON! Video Player as a plugin for jQuery
  * Author: Jarrod Carlson
  * Email: jarrod.carlson@playonsports.com
- * URL: ???
- * Version: 0.1
+ * URL: https://github.com/methodknowledgy/jwidget
+ * Version: 1.0
  * Requires:
- *      jQuery 1.4.4+ : http://jquery.com/
+ *      jQuery 1.5+ : http://jquery.com/
  *      jQuery-UI 1.8.9+ (Core, Widget, Position) : http://jqueryui.com/
  *      swfObject 2.2+ : http://code.google.com/p/swfobject/
- *      jquery.wsdata 0.1+ : ???
+ *      jquery.wsdata 1.0+ : https://github.com/methodknowledgy/jwidget
  *      JSON2 : http://www.JSON.org/
  *
  * Optional:
