@@ -50,19 +50,13 @@
         // execute request
         var request = {
 
-            _timer: setTimeout(function(){
-                $.handleError(request, message, "timeout", null);
-            }, options.timeout),
-
             cache: true, // if not true, jQuery adds a cache-buster... bad for OAuth...
             context: message.context,
             dataType: "jsonp",
             jsonpCallback: callback,
+            timeout: options.timeout,
             url: url,
 
-            complete: function(msg, status) {
-                clearTimeout(request._timer);
-            },
             error: function(msg, status, error) {
                 try {
                     delete $window[callback];
@@ -98,7 +92,7 @@
             oauth_token: "",
             oauth_token_secret: "",
             oauth_version: "1.0",
-            timeout: 5000,
+            timeout: 3000,
             token: "",
             webservice: "http://ws.playonsports.com"
         },

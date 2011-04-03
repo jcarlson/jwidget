@@ -106,7 +106,11 @@
             iframe.src = basePath + "../iframe.html" + qs;
             iframe.width = params.width;
             iframe.height = params.height;
+            iframe.frameBorder = "0";
+            iframe.noresize = "noresize";
+            iframe.scrolling = "no";
             iframe.style.border = "none";
+            iframe.style.overflow = "hidden";
 
             var container;
             if (params.container) {

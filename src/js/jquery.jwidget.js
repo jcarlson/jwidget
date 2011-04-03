@@ -47,29 +47,27 @@
     mediaId.next = 0;
 
     function View(element) {
+        this.element = element;
+        var self = this,
+            position = element.css("position");
 
-        var self = this;
-
-        this.root = $("<div/>")
-            .css({
-                height: "100%",
-                width: "100%",
-                position: "relative",
-                background: "#000000",
-                color: "#ffffff"
-            })
-            .appendTo(element);
+        if (position == "static") {
+            element.css("position", "relative");
+        }
 
         this.message = $("<span/>")
-            .appendTo(this.root)
+            .appendTo(element)
             .css({position: "absolute"})
             .hide();
 
         this.video = $("<div id='" + mediaId() + "'/>")
-            .appendTo(this.root)
+            .appendTo(element)
             .css({
-                height: "100%",
-                width: "100%"
+                position: "absolute",
+                top: "0",
+                right: "0",
+                bottom: "0",
+                left: "0"
             });
 
         this._positionElements();
@@ -95,13 +93,13 @@
     $.extend(View.prototype, {
 
         messages: {
-            "liveNotYetAvailable": "This event will be available live at the scheduled start time",
-            "beginsSoon": "This event will begin momentarily",
-            "countdown": "This event begins in<br/>{0}",
-            "vodNotAvailable": "This event is not available on-demand",
-            "vodNotYetAvailable": "This event will be available on-demand at the end of the event",
-            "vodNoLongerAvailable": "This event is no longer available on-demand",
-            "nothingAvailable": "This event is not available live or on-demand"
+            liveNotYetAvailable: "This event will be available live at the scheduled start time",
+            beginsSoon: "This event will begin momentarily",
+            countdown: "This event begins in<br/>{0}",
+            vodNotAvailable: "This event is not available on-demand",
+            vodNotYetAvailable: "This event will be available on-demand at the end of the event",
+            vodNoLongerAvailable: "This event is no longer available on-demand",
+            nothingAvailable: "This event is not available live or on-demand"
         },
 
         _embedFlash: function(url) {
@@ -149,28 +147,30 @@
         },
 
         _embedWMV: function(url) {
-            this.video.append($("<object/>")
-                .attr("classid", "clsid:22d6f312-b0f6-11d0-94ab-0080c74c7e95")
-                .attr("codebase", "http://activex.microsoft.com/activex/controls/mplayer/en/nsmp2inf.cab#version=5,1,52,701")
-                .attr("type", "application/x-oleobject")
-                .attr("width", "100%")
-                .attr("height", "100%")
-                .append($("<param/>").attr("name", "filename").attr("value", url))
-                .append($("<param/>").attr("name", "autostart").attr("value", "true"))
-                .append($("<param/>").attr("name", "showcontrols").attr("value", "true"))
-                .append($("<param/>").attr("name", "showstatusbar").attr("value", "false"))
-                .append($("<param/>").attr("name", "filename").attr("value", url))
-                .append($("<embed></embed>")
-                    .attr("type", "application/x-mplayer2")
-                    .attr("pluginspace", "http://www.microsoft.com/Windows/MediaPlayer/")
-                    .attr("src", url)
-                    .attr("width", "100%")
-                    .attr("height", "100%")
-                    .attr("autostart", "1")
-                    .attr("showcontrols", "1")
-                    .attr("showstatusbar", "0")
-                    .attr("showdisplay", "0")
-                ));
+            var isIE = $.browser.msie,
+                type = isIE ? "video/x-ms-wmp" : "application/x-ms-wmp",
+                clsid = isIE ? "classid='clsid:6BF52A52-394A-11d3-B153-00C04F79FAA6'" : "";
+
+            var embed = ""
+            + "<embed type='application/x-mplayer2' "
+            + "  pluginspage='http://www.microsoft.com/Windows/Downloads/Contents/MediaPlayer/' "
+            + "  src='{url}' autostart='true' showstatusbar='0' showcontrols='1' "
+            + "  showdisplay='0' width='100%' height='100%' />";
+
+
+            var object = ""
+            + "<object type='" + type + "' " + clsid + " width='100%' height='100%'>"
+            + "    <param name='url' value='{url}' />"
+            + "    <param name='autoStart' value='true' />"
+            + "    <param name='stretchToFit' value='true' />"
+            +      (isIE ? "" : embed)
+            + "</object>";
+
+            while(object.match("{url}")) {
+                object = object.replace("{url}", url);
+            }
+
+            this.video.html(object);
 
             this.removeVideo = function() {
                 this.video.empty();
@@ -181,7 +181,7 @@
             this.message.position({
                 my: "center center",
                 at: "center center",
-                of: this.root
+                of: this.element
             });
         },
 
