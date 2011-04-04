@@ -136,6 +136,7 @@
             }
 
             if (container != null) {
+                container.innerHTML = "";
                 container.appendChild(iframe);
             } else {
                 if (contains($document.body, self)) {
