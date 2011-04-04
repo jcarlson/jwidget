@@ -76,9 +76,12 @@
             element.css("position", "relative");
         }
 
-        this.element.css({
-            background: "#000000"
-        });
+        // setup the target element
+        this.element
+            .empty()
+            .css({
+                background: "#000000"
+            });
 
         this.video = $("<div id='" + mediaId() + "'/>")
             .appendTo(element)
