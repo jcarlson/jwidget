@@ -42,6 +42,26 @@
         $window._gaq.push(['playon._trackEvent', category, action, label]);
     }
 
+    function parseISODate(date) {
+        var timestamp = Date.parse(date),
+            minutesOffset = 0,
+            struct;
+
+        if (isNaN(timestamp) && (struct = /^(\d{4}|[+\-]\d{6})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{3,}))?)?(?:(Z)|([+\-])(\d{2})(?::?(\d{2}))?))?/.exec(date))) {
+            if (struct[8] !== 'Z') {
+                minutesOffset = +struct[10] * 60 + (+struct[11]);
+
+                if (struct[9] === '+') {
+                    minutesOffset = 0 - minutesOffset;
+                }
+            }
+
+            timestamp = Date.UTC(+struct[1], +struct[2] - 1, +struct[3], +struct[4], +struct[5] + minutesOffset, +struct[6], +struct[7].substr(0, 3));
+        }
+
+        return new Date(timestamp);
+    }
+
     function mediaId() {
         return "media_" + mediaId.next++;
     }
@@ -56,10 +76,9 @@
             element.css("position", "relative");
         }
 
-        this.message = $("<span/>")
-            .appendTo(element)
-            .css({position: "absolute"})
-            .hide();
+        this.element.css({
+            background: "#000000"
+        });
 
         this.video = $("<div id='" + mediaId() + "'/>")
             .appendTo(element)
@@ -68,14 +87,28 @@
                 top: "0",
                 right: "0",
                 bottom: "0",
-                left: "0"
+                left: "0",
+                overflow: "hidden"
             });
 
-        this._positionElements();
+        this.message = $("<div/>")
+            .appendTo(element)
+            .css({
+                fontFamily: "arial",
+                fontSize: "16px",
+                fontWeight: "bold",
+                position: "absolute",
+                left: "10%",
+                right: "10%",
+                textAlign: "center"
+            })
+            .hide();
 
-        $($window).resize(function() {
+        $(window).resize(function(){
             self._positionElements();
         });
+
+        this._positionElements();
 
     }
     $.extend(View, {
@@ -171,10 +204,11 @@
                 object = object.replace("{url}", url);
             }
 
-            this.video.html(object);
+            // hack?!? jQuery's .html([string]) method wreaks havoc on the object tag in IE
+            this.video.get(0).innerHTML = object;
 
             this.removeVideo = function() {
-                this.video.empty();
+                this.video.get(0).innerHTML = "";
             }
         },
 
@@ -186,19 +220,42 @@
             });
         },
 
-        getElement: function() {
-            return this.root;
-        },
+        showMessage: function(model) {
+            if ($.isFunction(this.removeVideo)) {
+                this.removeVideo();
+                this.removeVideo = null;
+            }
 
-        showMessage: function(code) {
-            this._removeVideo();
+            var self = this,
+                code = model.getMessageCode(),
+                message = this.messages[code];
 
-            var message = this.messages[code];
-            this.message.text(message);
+            if (code == "countdown") {
+                var remain = Math.floor(model.getTimeToScheduledDate() / 1000) % 86400,
+                    hours = Math.floor(remain / 3600);
+                remain = remain % 3600;
+                var mins = Math.floor(remain / 60);
+                remain = remain % 60;
+                var secs = Math.floor(remain),
+                    time = (hours < 10 ? "0" : "") + hours + ":" + (mins < 10 ? "0" : "")
+                        + mins + ":" + (secs < 10 ? "0" : "") + secs;
+                message = message.replace("{0}", time);
+
+                // since we're in a countdown, we need to keep calling showMessage
+                // don't worry about the timerId because it's safe to recall this method as many times as you want
+                setTimeout(function(){
+                    self.showMessage(model);
+                }, 1000);
+            }
+
+            this.message.html(message);
             this.message.show();
+            this._positionElements();
         },
 
-        showVideo: function(url) {
+        showVideo: function(model) {
+            var url = model.getVideoURL();
+
             if (this.videoURL && this.videoURL == url) {
                 // video is the same as it was before, so ignore
                 return;
@@ -233,40 +290,112 @@
 
         options: {
             afterEventPollWindow: 1000 * 60 * 60 * 8,
-            beforeEventPollWindow: 1000 * 60 * 30
+            beforeEventPollWindow: 1000 * 60 * 30,
+            countdownLowerThreshold: 1000 * 60 * 5, // 5 minutes
+            countdownUpperThreshold: 1000 * 60 * 60 * 24 // 24 hours
+        },
+
+        equals: function(obj) {
+
+            // check for nulls, etc...
+            if (this.data === null && obj !== null) {
+                return false;
+            }
+
+            if (!$.isPlainObject(obj)) {
+                return false;
+            }
+
+            // if obj is a Model instance, use the backing data object for comparison
+            if (obj instanceof Model) {
+                obj = obj.data;
+            }
+
+            var data = this.data;
+
+            // check if scheduledDate is equal
+            if (data.uri != obj.uri ||data.scheduledDate != obj.scheduledDate) {
+                return false;
+            }
+
+            // check if availability properties are equal
+            if (JSON.stringify(data.availability) != JSON.stringify(obj.availability)) {
+                return false;
+            }
+
+            // check if broadcast properties are equal
+            if (JSON.stringify(data.broadcast) != JSON.stringify(obj.broadcast)) {
+                return false;
+            }
+
+            // check if video properties are equal
+            if (!$.isPlainObject(obj.video)) {
+                return false;
+            }
+            // compare video url, sans query string, due to oauth signature
+            var v1 = (data.video.url || "").split("?")[0],
+                v2 = (obj.video.url || "").split("?")[0];
+            if (v1 != v2) {
+                return false;
+            }
+
+            // as far as I am concerned, these data objects appear equivalent
+            return true;
         },
 
         getMessageCode: function() {
-            var broadcast = this.data.broadcast;
+            var broadcast = this.data.broadcast,
+                code = "";
 
             if (broadcast.live == "pre") {
-                return "liveNotYetAvailable";
+                code = "liveNotYetAvailable";
             } else if (broadcast.live == "in") {
                 if (!broadcast.live_visible) {
-                   return "liveNotYetAvailable";
+                   code = "liveNotYetAvailable";
                 } else {
                     // do nothing, a video is available
                 }
             } else {
                 if (broadcast.vod == "pre") {
-                    return "vodNotYetAvailable";
+                    code = "vodNotYetAvailable";
                 } else if (broadcast.vod == "in") {
                     if (!broadcast.vod_visible) {
-                        return "vodNotYetAvailable";
+                        code = "vodNotYetAvailable";
                     } else {
                         // do nothing, a video is available
                     }
                 } else if (broadcast.vod == "post") {
-                    return "vodNoLongerAvailable";
+                    code = "vodNoLongerAvailable";
                 } else {
                     if (broadcast.live == "un") {
-                        return "nothingAvailable";
+                        code = "nothingAvailable";
                     } else {
-                        return "vodNotAvailable";
+                        code = "vodNotAvailable";
                     }
                 }
             }
 
+            if (code == "liveNotYetAvailable") {
+                var remain = this.getTimeToScheduledDate();
+
+                if (remain <= this.options.countdownUpperThreshold) {
+                    code = "countdown";
+                }
+                if (remain <= this.options.countdownLowerThreshold) {
+                    code = "beginsSoon";
+                }
+            }
+
+            return code;
+
+        },
+
+        getTimeToScheduledDate: function() {
+            return this.getScheduledDate().getTime() - new Date().getTime();
+        },
+
+        getScheduledDate: function() {
+            return parseISODate(this.data.scheduledDate);
         },
 
         getURI: function() {
@@ -284,7 +413,7 @@
             }
 
             var now = new Date().getTime(),
-                scheduled = new Date(this.data.scheduledDate).getTime();
+                scheduled = this.getScheduledDate().getTime();
 
             if (scheduled > now && scheduled - this.options.beforeEventPollWindow <= now) {
                 return true;
@@ -307,20 +436,18 @@
         },
 
         setData: function(data) {
-            var data_json = JSON.stringify(data);
-            if (this.data_json && this.data_json == data_json) {
+            if (this.equals(data)) {
                 // data is identical. abort.
                 return;
             }
 
             this.data = data;
-            this.data_json = data_json; // for future comparison
 
             if (this.isLive() || this.isVOD()) {
-                this.view.showVideo(this.getVideoURL());
+                this.view.showVideo(this);
                 gaEvent(this.getURI(), "View Video", this.isLive() ? "Live" : "VOD")
             } else {
-                this.view.showMessage(this.getMessageCode());
+                this.view.showMessage(this);
             }
         }
 
@@ -336,8 +463,6 @@
             token: ""
         },
 
-        timer: null,
-
         _create: function() {
             this.view = new View(this.element);
             this.model = new Model(this.view);
@@ -350,22 +475,29 @@
         },
 
         _getEventData: function() {
-            var self = this;
             this.svc.get(this.getEventUri(), {
                 context: this,
-                success: function(data) {
-                    this.model.setData(data);
-                    if (this.model.isMonitored()) {
-                        this.timer = setTimeout(function() {
-                            self._getEventData();
-                        }, this.options.statusInterval);
-                    }
-                }
+                success: this._setEventData
             });
+        },
+
+        _setEventData: function(data) {
+            var self = this;
+            this.model.setData(data);
+
+            if (this.model.isMonitored()) {
+                setTimeout(function() {
+                    self._getEventData();
+                }, this.options.statusInterval);
+            }
         },
 
         getEventUri: function() {
             return "/events/" + this.options.eventId;
+        },
+
+        getEventModel: function() {
+            return this.model;
         }
 
     });
