@@ -2,11 +2,13 @@
 <html>
     <head>
         <title>Legacy Mode</title>
-        <script src="core_player.nocache.js?cfg=jwidget"></script>
+        <script src="http://static.playonsports.com/core_player/jwidget/core_player.nocache.js?cfg=jwidget"></script>
     </head>
     <body>
 
         <h1>Legacy Mode</h1>
+
+        <div id="container"></div>
 
         <script type="text/javascript">
 
@@ -14,7 +16,9 @@
                 eventId: "17913",
                 token: "ea9ed22331b046e9bb0c96df64e92e3b",
                 width: "480",
-                height: "292"
+                height: "292",
+                container: "container",
+                "ws.api.readonly": "http://ws.playonsports.com"
             };
 
         </script>

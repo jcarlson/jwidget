@@ -59,7 +59,7 @@
                     if (param.indexOf("=") > -1) {
                         var key = param.split("=")[0],
                             value = param.split("=")[1];
-                        obj[key] = value;
+                        obj[key] = decodeURIComponent(value);
                     }
                 }
 

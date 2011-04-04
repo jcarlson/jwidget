@@ -112,11 +112,14 @@
             var iframe = $document.createElement("iframe"),
                 qs = "?";
 
+            adaptConfigs(params);
+
             for (var param in params) {
                 if (params.hasOwnProperty(param)) {
-                    qs += param + "=" + params[param] + "&";
+                    qs += param + "=" + encodeURIComponent(params[param]) + "&";
                 }
             }
+
             qs += "rdm=" + Math.floor(Math.random() * 1000000000);
             iframe.src = basePath + "iframe.html" + qs;
             iframe.width = params.width;
@@ -129,19 +132,26 @@
 
             var container;
             if (params.container) {
-                $document.getElementById(params.container);
+                container = $document.getElementById(params.container);
             }
 
             if (container != null) {
                 container.appendChild(iframe);
             } else {
                 if (contains($document.body, self)) {
-                    $document.insertAfter(iframe, self);
+                    self.parentNode.insertBefore(iframe, self);
                 } else {
                     $document.body.appendChild(iframe);
                 }
             }
 
+        }
+    }
+
+    function adaptConfigs(params) {
+        if (params["ws.api.readonly"]) {
+            params["webservice"] = params["ws.api.readonly"];
+            delete params["ws.api.readonly"];
         }
     }
 
