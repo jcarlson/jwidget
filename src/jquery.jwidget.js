@@ -346,6 +346,10 @@
             return true;
         },
 
+        getData: function() {
+            return this.data;
+        },
+
         getMessageCode: function() {
             var broadcast = this.data.broadcast,
                 code = "";
@@ -462,6 +466,7 @@
 
         options: {
             eventId: null,
+            pollingEnabled: true,
             statusInterval: 10000,
             token: ""
         },
@@ -478,17 +483,26 @@
         },
 
         _getEventData: function() {
-            this.svc.get(this.getEventUri(), {
-                context: this,
-                success: this._setEventData
-            });
+            var self = this,
+                uri = this.getEventUri();
+
+            setTimeout(function(){
+                self.svc.get(uri, {
+                    context: self,
+                    success: self._setEventData
+                });
+                self._trigger("poll");
+            }, 0);
         },
 
         _setEventData: function(data) {
-            var self = this;
-            this.model.setData(data);
+            var self = this,
+                oldData = this.model.data;
 
-            if (this.model.isMonitored()) {
+            this.model.setData(data);
+            this._trigger("data", null, this.getModel());
+
+            if (this.model.isMonitored() && this.options.pollingEnabled) {
                 setTimeout(function() {
                     self._getEventData();
                 }, this.options.statusInterval);
@@ -499,7 +513,8 @@
             return "/events/" + this.options.eventId;
         },
 
-        getEventModel: function() {
+        getModel: function() {
+            if (this.model.data == null) return null;
             return this.model;
         }
 
