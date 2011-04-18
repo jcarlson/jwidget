@@ -139,6 +139,7 @@
             nothingAvailable: "This event is not available live or on-demand"
         },
 
+         // TODO: This *replaces* this.video in the DOM! This should be fixed.
         _embedFlash: function(url) {
             var flashvars = {
                     file: url,
@@ -284,9 +285,12 @@
     });
 
 
-    function Model(view) {
-        this.view = view;
+    function Model(view, controller, options) {
+        this.controller = controller;
         this.data = null;
+        this.options = $.extend({}, this.options, options);
+        this.svc = $.wsdata(options);
+        this.view = view;
     }
 
     $.extend(Model.prototype, {
@@ -406,6 +410,7 @@
         },
 
         getURI: function() {
+            if (!this.data) return "/events/" + this.options.eventId;
             return this.data.uri;
         },
 
@@ -426,12 +431,10 @@
                 return true;
             }
 
-            if (scheduled <= now
-                    && scheduled + this.options.afterEventPollWindow > now) {
-                return true;
-            }
+            return scheduled <= now
+                    && scheduled + this.options.afterEventPollWindow > now;
 
-            return false;
+
 
         },
 
@@ -440,6 +443,18 @@
         },
         isVOD: function() {
             return this.data.broadcast.vod == "in" && this.data.broadcast.vod_visible;
+        },
+
+        refresh: function() {
+            var self = this,
+                uri = this.getURI();
+
+            setTimeout(function(){
+                self.svc.get(uri, {
+                    context: self,
+                    success: self.setData
+                });
+            }, 0);
         },
 
         setData: function(data) {
@@ -456,6 +471,8 @@
             } else {
                 this.view.showMessage(this);
             }
+
+            this.controller._onEventData(new $.Event("data"));
         }
 
     });
@@ -466,51 +483,30 @@
 
         options: {
             eventId: null,
-            pollingEnabled: true,
-            statusInterval: 10000,
+            pollingInterval: 10000,
             token: ""
         },
 
         _create: function() {
             this.view = new View(this.element);
-            this.model = new Model(this.view);
-            this.svc = $.wsdata(this.options);
+            this.model = new Model(this.view, this, this.options);
         },
 
         _init: function() {
-            this._getEventData();
-            gaPageView(this.getEventUri());
+            gaPageView(this.model.getURI());
+            this.model.refresh();
         },
 
-        _getEventData: function() {
-            var self = this,
-                uri = this.getEventUri();
+        _onEventData: function(event) {
+            var model = this.getModel();
 
-            setTimeout(function(){
-                self.svc.get(uri, {
-                    context: self,
-                    success: self._setEventData
-                });
-                self._trigger("poll");
-            }, 0);
-        },
+            this._trigger("data", event, model);
 
-        _setEventData: function(data) {
-            var self = this,
-                oldData = this.model.data;
-
-            this.model.setData(data);
-            this._trigger("data", null, this.getModel());
-
-            if (this.model.isMonitored() && this.options.pollingEnabled) {
+            if (model != null && model.isMonitored() && this.options.pollingInterval > 0) {
                 setTimeout(function() {
-                    self._getEventData();
-                }, this.options.statusInterval);
+                    model.refresh();
+                }, this.options.pollingInterval);
             }
-        },
-
-        getEventUri: function() {
-            return "/events/" + this.options.eventId;
         },
 
         getModel: function() {
