@@ -287,7 +287,7 @@
                 background: "#000000"
             });
 
-        this.video = $("<div id='" + mediaId() + "'/>")
+        this.video = $("<div/>")
             .appendTo(element)
             .css({
                 position: "absolute",
@@ -343,9 +343,9 @@
             nothingAvailable: "This event is not available live or on-demand"
         },
 
-         // TODO: This *replaces* this.video in the DOM! This should be fixed.
         _embedFlash: function(url) {
-            var flashvars = {
+            var tempId = mediaId(),
+                flashvars = {
                     file: url,
                     provider: "rtmp",
                     autostart: "true"
@@ -362,9 +362,12 @@
                 flashvars["file"] = url.replace(flashvars["streamer"] + "/", "");
             }
 
+            // insert a temporary <div> which swfObject will replace
+            this.video.html("<div id='" + tempId + "'/>");
+
             $swf.embedSWF(
                 "http://static.playonsports.com/jw-flv/5.1/player.swf",
-                this.video.attr("id"),
+                tempId,
                 "100%",
                 "100%",
                 "9.0.124",
@@ -375,9 +378,8 @@
                 null
             );
 
-            var id = this.video.attr("id");
             this.removeVideo = function() {
-                $swf.removeSWF();
+                $swf.removeSWF(tempId);
             };
         },
 
@@ -416,7 +418,7 @@
             this.video.get(0).innerHTML = object;
 
             this.removeVideo = function() {
-                this.video.get(0).innerHTML = "";
+                this.video.empty();
             }
         },
 
@@ -429,10 +431,7 @@
         },
 
         showMessage: function(model) {
-            if ($.isFunction(this.removeVideo)) {
-                this.removeVideo();
-                this.removeVideo = null;
-            }
+            this._removeVideo();
 
             var self = this,
                 code = model.getMessageCode(),
