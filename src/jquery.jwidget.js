@@ -67,6 +67,210 @@
     }
     mediaId.next = 0;
 
+
+    /**
+     * Model class. Pass the View, Controller and an options hash.
+     * @param view
+     * @param controller
+     * @param options
+     */
+    function Model(view, controller, options) {
+        this.controller = controller;
+        this.data = null;
+        this.options = $.extend({}, this.options, options);
+        this.svc = $.wsdata(options);
+        this.view = view;
+    }
+
+    $.extend(Model.prototype, {
+
+        options: {
+            afterEventPollWindow: 1000 * 60 * 60 * 8,
+            beforeEventPollWindow: 1000 * 60 * 30,
+            countdownLowerThreshold: 1000 * 60 * 5, // 5 minutes
+            countdownUpperThreshold: 1000 * 60 * 60 * 24 // 24 hours
+        },
+
+        equals: function(obj) {
+
+            // check for nulls, etc...
+            if (this.data === null && obj !== null) {
+                return false;
+            }
+
+            if (!$.isPlainObject(obj)) {
+                return false;
+            }
+
+            // if obj is a Model instance, use the backing data object for comparison
+            if (obj instanceof Model) {
+                obj = obj.data;
+            }
+
+            var data = this.data;
+
+            // check if scheduledDate is equal
+            if (data.uri != obj.uri ||data.scheduledDate != obj.scheduledDate) {
+                return false;
+            }
+
+            // check if availability properties are equal
+            if (JSON.stringify(data.availability) != JSON.stringify(obj.availability)) {
+                return false;
+            }
+
+            // check if broadcast properties are equal
+            if (JSON.stringify(data.broadcast) != JSON.stringify(obj.broadcast)) {
+                return false;
+            }
+
+            // check if video properties are equal
+            if (!$.isPlainObject(obj.video)) {
+                return false;
+            }
+            // compare video url, sans query string, due to oauth signature
+            var v1 = (data.video.url || "").split("?")[0],
+                v2 = (obj.video.url || "").split("?")[0];
+            if (v1 != v2) {
+                return false;
+            }
+
+            // as far as I am concerned, these data objects appear equivalent
+            return true;
+        },
+
+        getData: function() {
+            return this.data;
+        },
+
+        getMessageCode: function() {
+            var broadcast = this.data.broadcast,
+                code = "";
+
+            if (broadcast.live == "pre") {
+                code = "liveNotYetAvailable";
+            } else if (broadcast.live == "in") {
+                if (!broadcast.live_visible) {
+                   code = "liveNotYetAvailable";
+                } else {
+                    // do nothing, a video is available
+                }
+            } else {
+                if (broadcast.vod == "pre") {
+                    code = "vodNotYetAvailable";
+                } else if (broadcast.vod == "in") {
+                    if (!broadcast.vod_visible) {
+                        code = "vodNotYetAvailable";
+                    } else {
+                        // do nothing, a video is available
+                    }
+                } else if (broadcast.vod == "post") {
+                    code = "vodNoLongerAvailable";
+                } else {
+                    if (broadcast.live == "un") {
+                        code = "nothingAvailable";
+                    } else {
+                        code = "vodNotAvailable";
+                    }
+                }
+            }
+
+            if (code == "liveNotYetAvailable") {
+                var remain = this.getTimeToScheduledDate();
+
+                if (remain <= this.options.countdownUpperThreshold) {
+                    code = "countdown";
+                }
+                if (remain <= this.options.countdownLowerThreshold) {
+                    code = "beginsSoon";
+                }
+            }
+
+            return code;
+
+        },
+
+        getTimeToScheduledDate: function() {
+            return this.getScheduledDate().getTime() - new Date().getTime();
+        },
+
+        getScheduledDate: function() {
+            return parseISODate(this.data.scheduledDate);
+        },
+
+        getURI: function() {
+            if (!this.data) return "/events/" + this.options.eventId;
+            return this.data.uri;
+        },
+
+        getVideoURL: function() {
+            return this.data.video.url;
+        },
+
+        isMonitored: function() {
+
+            if (this.data.broadcast.live == "in") {
+                return true;
+            }
+
+            var now = new Date().getTime(),
+                scheduled = this.getScheduledDate().getTime();
+
+            if (scheduled > now && scheduled - this.options.beforeEventPollWindow <= now) {
+                return true;
+            }
+
+            return scheduled <= now
+                    && scheduled + this.options.afterEventPollWindow > now;
+
+
+
+        },
+
+        isLive: function() {
+            return this.data.broadcast.live == "in" && this.data.broadcast.live_visible;
+        },
+        isVOD: function() {
+            return this.data.broadcast.vod == "in" && this.data.broadcast.vod_visible;
+        },
+
+        refresh: function() {
+            var self = this,
+                uri = this.getURI();
+
+            setTimeout(function(){
+                self.svc.get(uri, {
+                    context: self,
+                    success: self.setData
+                });
+            }, 0);
+        },
+
+        setData: function(data) {
+            if (this.equals(data)) {
+                // data is identical. abort.
+                return;
+            }
+
+            this.data = data;
+
+            if (this.isLive() || this.isVOD()) {
+                this.view.showVideo(this);
+                gaEvent(this.getURI(), "View Video", this.isLive() ? "Live" : "VOD")
+            } else {
+                this.view.showMessage(this);
+            }
+
+            this.controller._onEventData(new $.Event("data"));
+        }
+
+    });
+
+
+    /**
+     * View class. Pass the target element to build out
+     * @param element
+     */
     function View(element) {
         this.element = element;
         var self = this,
@@ -285,200 +489,9 @@
     });
 
 
-    function Model(view, controller, options) {
-        this.controller = controller;
-        this.data = null;
-        this.options = $.extend({}, this.options, options);
-        this.svc = $.wsdata(options);
-        this.view = view;
-    }
-
-    $.extend(Model.prototype, {
-
-        options: {
-            afterEventPollWindow: 1000 * 60 * 60 * 8,
-            beforeEventPollWindow: 1000 * 60 * 30,
-            countdownLowerThreshold: 1000 * 60 * 5, // 5 minutes
-            countdownUpperThreshold: 1000 * 60 * 60 * 24 // 24 hours
-        },
-
-        equals: function(obj) {
-
-            // check for nulls, etc...
-            if (this.data === null && obj !== null) {
-                return false;
-            }
-
-            if (!$.isPlainObject(obj)) {
-                return false;
-            }
-
-            // if obj is a Model instance, use the backing data object for comparison
-            if (obj instanceof Model) {
-                obj = obj.data;
-            }
-
-            var data = this.data;
-
-            // check if scheduledDate is equal
-            if (data.uri != obj.uri ||data.scheduledDate != obj.scheduledDate) {
-                return false;
-            }
-
-            // check if availability properties are equal
-            if (JSON.stringify(data.availability) != JSON.stringify(obj.availability)) {
-                return false;
-            }
-
-            // check if broadcast properties are equal
-            if (JSON.stringify(data.broadcast) != JSON.stringify(obj.broadcast)) {
-                return false;
-            }
-
-            // check if video properties are equal
-            if (!$.isPlainObject(obj.video)) {
-                return false;
-            }
-            // compare video url, sans query string, due to oauth signature
-            var v1 = (data.video.url || "").split("?")[0],
-                v2 = (obj.video.url || "").split("?")[0];
-            if (v1 != v2) {
-                return false;
-            }
-
-            // as far as I am concerned, these data objects appear equivalent
-            return true;
-        },
-
-        getData: function() {
-            return this.data;
-        },
-
-        getMessageCode: function() {
-            var broadcast = this.data.broadcast,
-                code = "";
-
-            if (broadcast.live == "pre") {
-                code = "liveNotYetAvailable";
-            } else if (broadcast.live == "in") {
-                if (!broadcast.live_visible) {
-                   code = "liveNotYetAvailable";
-                } else {
-                    // do nothing, a video is available
-                }
-            } else {
-                if (broadcast.vod == "pre") {
-                    code = "vodNotYetAvailable";
-                } else if (broadcast.vod == "in") {
-                    if (!broadcast.vod_visible) {
-                        code = "vodNotYetAvailable";
-                    } else {
-                        // do nothing, a video is available
-                    }
-                } else if (broadcast.vod == "post") {
-                    code = "vodNoLongerAvailable";
-                } else {
-                    if (broadcast.live == "un") {
-                        code = "nothingAvailable";
-                    } else {
-                        code = "vodNotAvailable";
-                    }
-                }
-            }
-
-            if (code == "liveNotYetAvailable") {
-                var remain = this.getTimeToScheduledDate();
-
-                if (remain <= this.options.countdownUpperThreshold) {
-                    code = "countdown";
-                }
-                if (remain <= this.options.countdownLowerThreshold) {
-                    code = "beginsSoon";
-                }
-            }
-
-            return code;
-
-        },
-
-        getTimeToScheduledDate: function() {
-            return this.getScheduledDate().getTime() - new Date().getTime();
-        },
-
-        getScheduledDate: function() {
-            return parseISODate(this.data.scheduledDate);
-        },
-
-        getURI: function() {
-            if (!this.data) return "/events/" + this.options.eventId;
-            return this.data.uri;
-        },
-
-        getVideoURL: function() {
-            return this.data.video.url;
-        },
-
-        isMonitored: function() {
-
-            if (this.data.broadcast.live == "in") {
-                return true;
-            }
-
-            var now = new Date().getTime(),
-                scheduled = this.getScheduledDate().getTime();
-
-            if (scheduled > now && scheduled - this.options.beforeEventPollWindow <= now) {
-                return true;
-            }
-
-            return scheduled <= now
-                    && scheduled + this.options.afterEventPollWindow > now;
-
-
-
-        },
-
-        isLive: function() {
-            return this.data.broadcast.live == "in" && this.data.broadcast.live_visible;
-        },
-        isVOD: function() {
-            return this.data.broadcast.vod == "in" && this.data.broadcast.vod_visible;
-        },
-
-        refresh: function() {
-            var self = this,
-                uri = this.getURI();
-
-            setTimeout(function(){
-                self.svc.get(uri, {
-                    context: self,
-                    success: self.setData
-                });
-            }, 0);
-        },
-
-        setData: function(data) {
-            if (this.equals(data)) {
-                // data is identical. abort.
-                return;
-            }
-
-            this.data = data;
-
-            if (this.isLive() || this.isVOD()) {
-                this.view.showVideo(this);
-                gaEvent(this.getURI(), "View Video", this.isLive() ? "Live" : "VOD")
-            } else {
-                this.view.showMessage(this);
-            }
-
-            this.controller._onEventData(new $.Event("data"));
-        }
-
-    });
-
-
-    // Acts as the Controller
+    /**
+     * Acts as the Controller and as the jQueryUI widget
+     */
     $.widget("ui.jwidget", {
 
         options: {
